@@ -83,10 +83,11 @@ def convert_imports_to_code(import_line: str, file_path:os.PathLike = "") -> str
         else:
             break
     
-    content = handle_import_line(import_line, file_path)
+    content, replaces = handle_import_line(import_line, file_path)
     content = "\n".join([tabs + line for line in content.split('\n')])
     content = append_code(content, file_path)
-    return content
+    
+    return content, replaces
 
 def append_code(content: str, file_path:str) -> str:
     """
@@ -99,7 +100,11 @@ def append_code(content: str, file_path:str) -> str:
     for line in content.split('\n'):
         #pegando os tabs no inicio da linha
         if line.strip().startswith("from ") or line.strip().startswith("import "):
-            new_code += convert_imports_to_code(line, file_path) + '\n'
+            content, replaces = convert_imports_to_code(line, file_path) + '\n'
+            new_code += content
+            for replace in replaces:
+                new_code = new_code.replace(replace, '')
+            
         else:
             new_code = new_code + line + '\n'
         line_n += 1
@@ -122,7 +127,10 @@ def main(start_file: os.PathLike) -> None:
     abs_path = os.path.abspath(start_file)
     content = read_file(abs_path)
     content = append_code(content, start_file)
-    print(content)
+    new_name = start_file.split('/')[-1].split('.')[0]
+    new_file = open(f'{new_name}_one.py', 'w', encoding="utf-8")
+    new_file.write(content)
+    new_file.close()
 
 if __name__ == '__main__':
     main('tests/test_import_type_2.py')

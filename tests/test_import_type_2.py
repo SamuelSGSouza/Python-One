@@ -1,3 +1,3 @@
-import modulo_folder.modulo
+import modulo_folder.modulo as p
 
-print(modulo_folder.modulo.pastel)
+print(p.pastel)

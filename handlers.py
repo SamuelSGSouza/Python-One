@@ -60,8 +60,13 @@ def handle_direct_import(import_line: str, file_path:os.PathLike = "") -> str:
     
     with open(import_path, 'r', encoding="utf-8") as file:
         content += file.read()
+
+    to_replace = import_line.split(' ')[1] + "."
+    if " as " in import_line:
+        to_replace = import_line.split(' ')[3] + "."
+    replaces = [to_replace, ]
     
-    return content 
+    return content, replaces
 
 def handle_relative_import(import_line: str) -> str:
     pass
