@@ -3,10 +3,7 @@ import importlib
 import os
 import re
 import importlib.util
-import sys
-
-# Constantes
-BUILTIN_MODULES = sys.builtin_module_names
+from handlers import handle_import_line
 
 OK                  = 0
 FILE_NOT_FOUND      = 1
@@ -37,7 +34,8 @@ def verify_file(start_file: os.PathLike) -> int:
     if not start_file.endswith('.py'):
         print(dict_errors[FILE_IS_NOT_PYTHON])
         return FILE_IS_NOT_PYTHON
-    
+    global ACTUAL_DIR
+    ACTUAL_DIR = os.path.dirname(os.path.abspath(start_file))
     return OK
 
 def clean_file(content: str) -> str:
@@ -72,25 +70,12 @@ def read_file(start_file: os.PathLike) -> str:
     content = clean_file(content)
     return content
 
-def convert_imports_to_code(import_line: str) -> str:
+def convert_imports_to_code(import_line: str, file_path:os.PathLike = "") -> str:
     """
         Convert the imports to code.
         Returns:
             str: The code of the imports
     """
-    parts_of_line = import_line.split(' ')
-    if any(part in BUILTIN_MODULES for part in parts_of_line):
-        return import_line + f'Import {import_line} is a builtin module'
-    import_path = importlib.util.find_spec(import_line.strip().split(' ')[1])
-    if import_path is None:
-        raise Exception(f'Error: {dict_errors[IMPORT_IS_NOT_FOUND]}. Import: {import_line}')
-    
-    
-    import_path = import_path.origin
-    if import_path in USED_MODULES:
-        return ''
-    USED_MODULES.append(import_path)
-
     tabs = ""
     for char in import_line:
         if char == ' ':
@@ -98,12 +83,12 @@ def convert_imports_to_code(import_line: str) -> str:
         else:
             break
     
-    content = read_file(import_path)
+    content = handle_import_line(import_line, file_path)
     content = "\n".join([tabs + line for line in content.split('\n')])
-    content = append_code(content)
+    content = append_code(content, file_path)
     return content
 
-def append_code(content: str) -> str:
+def append_code(content: str, file_path:str) -> str:
     """
         Get the imports of the file.
         Returns:
@@ -113,8 +98,8 @@ def append_code(content: str) -> str:
     line_n=0
     for line in content.split('\n'):
         #pegando os tabs no inicio da linha
-        if line.strip().startswith("from ") and "import " in line:
-            new_code += convert_imports_to_code(line) + '\n'
+        if line.strip().startswith("from ") or line.strip().startswith("import "):
+            new_code += convert_imports_to_code(line, file_path) + '\n'
         else:
             new_code = new_code + line + '\n'
         line_n += 1
@@ -134,9 +119,10 @@ def main(start_file: os.PathLike) -> None:
     """
         Main function
     """
-    content = read_file(start_file)
-    content = append_code(content)
+    abs_path = os.path.abspath(start_file)
+    content = read_file(abs_path)
+    content = append_code(content, start_file)
     print(content)
 
 if __name__ == '__main__':
-    main('manage.py')
+    main('tests/test_import_type_2.py')
