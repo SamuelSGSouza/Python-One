@@ -19,10 +19,10 @@ def handle_import_line(import_line: str, file_path:os.PathLike = "") -> str:
     """
 
     if import_line.strip().startswith("import "):
-        print("Começando com import")
         return handle_direct_import(import_line, file_path)
 
     elif import_line.strip().startswith("from "):
+        return import_line, [] # Not implemented yet
         content = handle_relative_import(import_line, file_path)
         raise Exception(f'NÃO QUERO ISSO. Import: {import_line}')
 
@@ -30,7 +30,7 @@ def handle_import_line(import_line: str, file_path:os.PathLike = "") -> str:
         raise Exception(f'Import Line is Not Valid. Import: {import_line}')
     
 
-def handle_direct_import(import_line: str, file_path:os.PathLike = "") -> str:
+def handle_direct_import(import_line: str, file_path:os.PathLike = "") -> {str, list}:
     """
         This funcion handles direct imports like:
             - import os
@@ -55,7 +55,6 @@ def handle_direct_import(import_line: str, file_path:os.PathLike = "") -> str:
         raise Exception(f'Error: Import is not found. Import: {import_line}') # Import not found
     
     import_path = import_path.origin
-    print("Import path: ", import_path)
     
     
     with open(import_path, 'r', encoding="utf-8") as file:
@@ -68,7 +67,7 @@ def handle_direct_import(import_line: str, file_path:os.PathLike = "") -> str:
     
     return content, replaces
 
-def handle_relative_import(import_line: str) -> str:
+def handle_relative_import(import_line: str, file_path:os.PathLike = "") -> str:
     pass
 
 def handle_import_type_1(import_line, file_path:str ="") -> str:

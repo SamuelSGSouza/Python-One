@@ -16,7 +16,8 @@ dict_errors = {
     IMPORT_IS_NOT_FOUND: 'Import is not found'
 }
 
-USED_MODULES = []
+REPLACERS = []
+
 
 def verify_file(start_file: os.PathLike) -> int:
     """
@@ -100,10 +101,11 @@ def append_code(content: str, file_path:str) -> str:
     for line in content.split('\n'):
         #pegando os tabs no inicio da linha
         if line.strip().startswith("from ") or line.strip().startswith("import "):
-            content, replaces = convert_imports_to_code(line, file_path) + '\n'
+            content, replaces = convert_imports_to_code(line, file_path)
+            content+= '\n'
             new_code += content
             for replace in replaces:
-                new_code = new_code.replace(replace, '')
+                REPLACERS.append(replace)
             
         else:
             new_code = new_code + line + '\n'
@@ -127,10 +129,12 @@ def main(start_file: os.PathLike) -> None:
     abs_path = os.path.abspath(start_file)
     content = read_file(abs_path)
     content = append_code(content, start_file)
+    for replace in REPLACERS:
+        content = content.replace(replace, '')
     new_name = start_file.split('/')[-1].split('.')[0]
     new_file = open(f'{new_name}_one.py', 'w', encoding="utf-8")
     new_file.write(content)
     new_file.close()
 
 if __name__ == '__main__':
-    main('tests/test_import_type_2.py')
+    main('tests/test_import_type_1.py')

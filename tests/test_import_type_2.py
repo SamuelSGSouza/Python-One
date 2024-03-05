@@ -1,3 +1,4 @@
-import modulo_folder.modulo as p
+import sys
 
-print(p.pastel)
+
+paht = "teste/teste1.py"

@@ -12,4 +12,4 @@ class Bolinho:
         return f"Bolinho de {self.sabor}"
 
 
-print(p.pastel)
+print(pastel)
