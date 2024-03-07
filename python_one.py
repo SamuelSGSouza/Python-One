@@ -15,8 +15,9 @@ dict_errors = {
     FILE_IS_NOT_PYTHON: 'File is not a Python file',
     IMPORT_IS_NOT_FOUND: 'Import is not found'
 }
+USED_IMPORTS = []
 
-REPLACERS = []
+ONE_CODE = ""
 
 
 def verify_file(start_file: os.PathLike) -> int:
@@ -29,11 +30,9 @@ def verify_file(start_file: os.PathLike) -> int:
 
     """
     if not os.path.exists(start_file):
-        print(dict_errors[FILE_NOT_FOUND])
         return FILE_NOT_FOUND
     
     if not start_file.endswith('.py'):
-        print(dict_errors[FILE_IS_NOT_PYTHON])
         return FILE_IS_NOT_PYTHON
     global ACTUAL_DIR
     ACTUAL_DIR = os.path.dirname(os.path.abspath(start_file))
@@ -56,10 +55,6 @@ def read_file(start_file: os.PathLike) -> str:
         Raises:
             Exception: If the file does not exist or is not a Python file.
     """
-    print("*"*20)
-    print("Reading file " + start_file)
-    print("*"*20)
-    print("\n")
     file_status = verify_file(start_file)
     if file_status != OK:
         raise Exception(f'Error: {file_status}. File: {start_file}')
@@ -84,11 +79,11 @@ def convert_imports_to_code(import_line: str, file_path:os.PathLike = "") -> str
         else:
             break
     
-    content, replaces = handle_import_line(import_line, file_path)
+    content = handle_import_line(import_line, file_path)
     content = "\n".join([tabs + line for line in content.split('\n')])
     content = append_code(content, file_path)
     
-    return content, replaces
+    return content
 
 def append_code(content: str, file_path:str) -> str:
     """
@@ -100,12 +95,11 @@ def append_code(content: str, file_path:str) -> str:
     line_n=0
     for line in content.split('\n'):
         #pegando os tabs no inicio da linha
-        if line.strip().startswith("from ") or line.strip().startswith("import "):
-            content, replaces = convert_imports_to_code(line, file_path)
+        if (line.strip().startswith("from ") or line.strip().startswith("import ")) and line.strip() not in USED_IMPORTS:
+            USED_IMPORTS.append(line.strip())
+            content = convert_imports_to_code(line, file_path)
             content+= '\n'
             new_code += content
-            for replace in replaces:
-                REPLACERS.append(replace)
             
         else:
             new_code = new_code + line + '\n'
@@ -129,12 +123,15 @@ def main(start_file: os.PathLike) -> None:
     abs_path = os.path.abspath(start_file)
     content = read_file(abs_path)
     content = append_code(content, start_file)
-    for replace in REPLACERS:
-        content = content.replace(replace, '')
-    new_name = start_file.split('/')[-1].split('.')[0]
-    new_file = open(f'{new_name}_one.py', 'w', encoding="utf-8")
+    file_name = os.path.basename(start_file).split('.')[0].split('\\')[-1]
+    new_file = open(f'{file_name}_one.py', 'w', encoding="utf-8")
     new_file.write(content)
     new_file.close()
 
 if __name__ == '__main__':
-    main('tests/test_import_type_1.py')
+    #listando arquivos na pasta test
+    files = os.listdir('tests')
+    for file in files:
+        if file.endswith('.py'):
+            path = os.path.join('tests', file)
+            main(path)

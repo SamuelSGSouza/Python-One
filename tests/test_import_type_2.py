@@ -1,4 +1,4 @@
-import sys
+import modulo_folder
 
 
-paht = "teste/teste1.py"
+print(modulo_folder.modulo.Bolinho)
