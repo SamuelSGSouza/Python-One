@@ -1,6 +1,8 @@
 import os
-import importlib.util
+import re
 import sys
+import importlib.util
+
 import pkgutil
 
 # Constantes
@@ -97,31 +99,42 @@ def handle_direct_import(import_line: str, file_path:os.PathLike = "") -> str:
     """
     content=""
 
-    parts_of_line = import_line.split(' ')
-    if any(part in BUILTIN_MODULES for part in parts_of_line):
-        return import_line # Built-in import
-    
-    sys.path.append(os.path.dirname(file_path)) #add file folder to the path
-    
-    import_path = importlib.util.find_spec(import_line.strip().split(' ')[1])
-    if import_path is None:
-        raise Exception(f'Error: Import is not found. Import: {import_line}') # Import not found
-    
-    import_path = import_path.origin
-    
-    with open(import_path, 'r', encoding="utf-8") as file:
-        content += file.read()
+    import_cores = re.sub(r'^import ', '', import_line.strip()).split(",")
+    for import_core in import_cores:
+        import_core = import_core.strip()
+        namespace = ""
+        if " as " in import_core:
+            parts = import_core.split(" as ")
+            import_core = parts[0].strip()
+            namespace = parts[1].strip()
 
-    import_core = import_line.split(' ')[1]
-    classes_to_create = import_core.split('.')
-    for class_name in reversed(classes_to_create):
-        class_content = "class " + class_name + ":\n"
-        #fazendo cada linha receber um tab
-        lines = "\n".join([f"   {line}" for line in content.split('\n')])
-        class_content += lines
-        content = class_content
+        if import_core.strip() in BUILTIN_MODULES:
+            content += "import " + import_core + "\n" # Built-in import
+            continue
+        
+        sys.path.append(os.path.dirname(file_path)) #add file folder to the path
+        print("IMPORT CORE: ", import_core)
+        import_path = importlib.util.find_spec(import_core)
+        if import_path is None:
+            raise Exception(f'Error: Import is not found. Import: {import_line}') # Import not found
+    
+        import_path = import_path.origin
+        
+        with open(import_path, 'r', encoding="utf-8") as file:
+            content += file.read()
 
-    sys.path.remove(os.path.dirname(file_path))
+        classes_to_create = import_core.split('.')
+        for class_name in reversed(classes_to_create):
+            class_content = "class " + class_name + ":\n"
+            #fazendo cada linha receber um tab
+            lines = "\n".join([f"   {line}" for line in content.split('\n')])
+            class_content += lines
+            content = class_content + "\n"
+        
+        if namespace:
+            content += namespace + " = " + import_core + "\n"
+
+        sys.path.remove(os.path.dirname(file_path))
     return content
 
 def handle_relative_import(import_line: str, file_path:os.PathLike = "") -> str:

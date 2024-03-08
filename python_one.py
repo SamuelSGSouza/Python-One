@@ -100,7 +100,6 @@ def append_code(content: str, file_path:str) -> str:
             content = convert_imports_to_code(line, file_path)
             content+= '\n'
             new_code += content
-            
         else:
             new_code = new_code + line + '\n'
         line_n += 1
