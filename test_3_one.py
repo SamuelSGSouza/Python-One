@@ -1,4 +1,4 @@
-class modulo_folder:
+class modulo_folder(modulo_folder):
    class modulo:
       def pastel():
           return "Pastel de zanahoria"

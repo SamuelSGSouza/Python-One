@@ -65,8 +65,9 @@ BUILTIN_MODULES = DEFAULT_MODULES + DEFAULT_PACKAGES
 TYPES = {
     1: "Built in import: 'import os' or 'import sys' or 'import re'...",
     2: "Simple import: 'import modulo' or 'import modulo.modulo2'...",
-    
 }
+
+USED_MODULES = []
 
 def handle_import_line(import_line: str, file_path:os.PathLike = "") -> str:
     """
@@ -113,7 +114,7 @@ def handle_direct_import(import_line: str, file_path:os.PathLike = "") -> str:
             continue
         
         sys.path.append(os.path.dirname(file_path)) #add file folder to the path
-        print("IMPORT CORE: ", import_core)
+
         import_path = importlib.util.find_spec(import_core)
         if import_path is None:
             raise Exception(f'Error: Import is not found. Import: {import_line}') # Import not found
@@ -124,8 +125,20 @@ def handle_direct_import(import_line: str, file_path:os.PathLike = "") -> str:
             content += file.read()
 
         classes_to_create = import_core.split('.')
+
+        father_class = classes_to_create[0]
+        
+
         for class_name in reversed(classes_to_create):
-            class_content = "class " + class_name + ":\n"
+            print("USED_MODULES", USED_MODULES)
+            if class_name == father_class:
+                if father_class in USED_MODULES:
+                    class_content = "class " + class_name + "(" + father_class + "):\n"
+                else:
+                    class_content = "class " + class_name + ":\n"
+                    USED_MODULES.append(father_class)
+            else:
+                class_content = "class " + class_name + ":\n"
             #fazendo cada linha receber um tab
             lines = "\n".join([f"   {line}" for line in content.split('\n')])
             class_content += lines

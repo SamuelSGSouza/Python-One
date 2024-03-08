@@ -16,7 +16,7 @@ class modulo_folder:
 m = modulo_folder.modulo
 
 
-class modulo_folder:
+class modulo_folder(modulo_folder):
    class modulo_2:
       def pizza():
           import modulo_folder.modulo as m

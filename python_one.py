@@ -129,8 +129,4 @@ def main(start_file: os.PathLike) -> None:
 
 if __name__ == '__main__':
     #listando arquivos na pasta test
-    files = os.listdir('tests')
-    for file in files:
-        if file.endswith('.py'):
-            path = os.path.join('tests', file)
-            main(path)
+    main("tests/test_4.py")
