@@ -67,9 +67,8 @@ TYPES = {
     2: "Simple import: 'import modulo' or 'import modulo.modulo2'...",
 }
 
-USED_MODULES = []
 
-def handle_import_line(import_line: str, file_path:os.PathLike = "") -> str:
+def handle_import_line(import_line: str,USED_ROOT_MODULES: list, file_path:os.PathLike = "") -> str:
     """
         This function gets the import line/lines from the file and choose the right handler.
         Returns:
@@ -77,7 +76,7 @@ def handle_import_line(import_line: str, file_path:os.PathLike = "") -> str:
     """
 
     if import_line.strip().startswith("import "):
-        return handle_direct_import(import_line, file_path)
+        return handle_direct_import(import_line, file_path, USED_ROOT_MODULES)
         
 
     elif import_line.strip().startswith("from "):
@@ -87,7 +86,7 @@ def handle_import_line(import_line: str, file_path:os.PathLike = "") -> str:
         raise Exception(f'Import Line is Not Valid. Import: {import_line}')
     
 
-def handle_direct_import(import_line: str, file_path:os.PathLike = "") -> str:
+def handle_direct_import(import_line: str, file_path:os.PathLike = "",USED_ROOT_MODULES: list = []) -> str:
     """
         This funcion handles direct imports like:
             - import os
@@ -125,24 +124,18 @@ def handle_direct_import(import_line: str, file_path:os.PathLike = "") -> str:
             content += file.read()
 
         classes_to_create = import_core.split('.')
-
-        father_class = classes_to_create[0]
-        
-
+        print("Used root modules: ", USED_ROOT_MODULES)
         for class_name in reversed(classes_to_create):
-            print("USED_MODULES", USED_MODULES)
-            if class_name == father_class:
-                if father_class in USED_MODULES:
-                    class_content = "class " + class_name + "(" + father_class + "):\n"
-                else:
-                    class_content = "class " + class_name + ":\n"
-                    USED_MODULES.append(father_class)
+            if class_name in USED_ROOT_MODULES:
+               class_content = "class " + class_name + "(" + classes_to_create[0] + "):\n"
             else:
                 class_content = "class " + class_name + ":\n"
+                if class_name == classes_to_create[0]:
+                    USED_ROOT_MODULES.append(classes_to_create[0])
             #fazendo cada linha receber um tab
             lines = "\n".join([f"   {line}" for line in content.split('\n')])
             class_content += lines
-            content = class_content + "\n"
+            content = class_content + "\n"        
         
         if namespace:
             content += namespace + " = " + import_core + "\n"

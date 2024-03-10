@@ -19,6 +19,7 @@ USED_IMPORTS = []
 
 ONE_CODE = ""
 
+DEPTH_MODULES_DICT = {}
 
 def verify_file(start_file: os.PathLike) -> int:
     """
@@ -66,7 +67,7 @@ def read_file(start_file: os.PathLike) -> str:
     content = clean_file(content)
     return content
 
-def convert_imports_to_code(import_line: str, file_path:os.PathLike = "") -> str:
+def convert_imports_to_code(import_line: str, profundidade:int, file_path:os.PathLike = "") -> str:
     """
         Convert the imports to code.
         Returns:
@@ -79,25 +80,32 @@ def convert_imports_to_code(import_line: str, file_path:os.PathLike = "") -> str
         else:
             break
     
-    content = handle_import_line(import_line, file_path)
+    content = handle_import_line(import_line,DEPTH_MODULES_DICT[profundidade], file_path)
     content = "\n".join([tabs + line for line in content.split('\n')])
-    content = append_code(content, file_path)
+    content = append_code(content, file_path, profundidade+1)
     
     return content
 
-def append_code(content: str, file_path:str) -> str:
+def append_code(content: str, file_path:str, profundidade:int) -> str:
     """
         Get the imports of the file.
         Returns:
             None
     """
+    DEPTH_MODULES_DICT[profundidade] = []
     new_code = ''
     line_n=0
     for line in content.split('\n'):
         #pegando os tabs no inicio da linha
         if (line.strip().startswith("from ") or line.strip().startswith("import ")) and line.strip() not in USED_IMPORTS:
             USED_IMPORTS.append(line.strip())
-            content = convert_imports_to_code(line, file_path)
+            print("*"*50)
+            print("Lidando com o import: ", line)
+            print("\n")
+            print("PROFUNDIDADE: ", profundidade)
+            content = convert_imports_to_code(line,profundidade, file_path)
+            if profundidade > 0:
+                DEPTH_MODULES_DICT[profundidade] = []
             content+= '\n'
             new_code += content
         else:
@@ -119,13 +127,20 @@ def main(start_file: os.PathLike) -> None:
     """
         Main function
     """
+    
+    PROFUNDIDADE = 0
     abs_path = os.path.abspath(start_file)
     content = read_file(abs_path)
-    content = append_code(content, start_file)
+    content = append_code(content, start_file, PROFUNDIDADE)
     file_name = os.path.basename(start_file).split('.')[0].split('\\')[-1]
     new_file = open(f'{file_name}_one.py', 'w', encoding="utf-8")
     new_file.write(content)
     new_file.close()
+
+    print("CRIAR UM DICIONÁRIO GERAL ONDE AS CHAVES \
+          SÃO A PROFUNDIDADE E OS VALORES SÃO OS ROOT \
+          MODULES QUE DEVEM SER RETORNADOS DO HANDLE IMPORT.")
+    print("QUANDO CHAMAR O HANDLE IMPORT, PASSAR O DICIONÁRIO ")
 
 if __name__ == '__main__':
     #listando arquivos na pasta test
