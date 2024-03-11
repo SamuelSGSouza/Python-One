@@ -71,6 +71,7 @@ TYPES = {
 def handle_import_line(import_line: str,USED_ROOT_MODULES: list, file_path:os.PathLike = "") -> str:
     """
         This function gets the import line/lines from the file and choose the right handler.
+        
         Returns:
             str: code to be appended to the new code
     """
@@ -80,12 +81,11 @@ def handle_import_line(import_line: str,USED_ROOT_MODULES: list, file_path:os.Pa
         
 
     elif import_line.strip().startswith("from "):
-        return handle_relative_import(import_line, file_path)
+        return handle_relative_import(import_line, file_path, USED_ROOT_MODULES)
 
     else:
         raise Exception(f'Import Line is Not Valid. Import: {import_line}')
     
-
 def handle_direct_import(import_line: str, file_path:os.PathLike = "",USED_ROOT_MODULES: list = []) -> str:
     """
         This funcion handles direct imports like:
@@ -94,6 +94,7 @@ def handle_direct_import(import_line: str, file_path:os.PathLike = "",USED_ROOT_
             - import modulo1.modulo2.modulo3 as m3
         If it is a built-in import, the function will return the import line as it is.
         Otherwise, the function will handle the import as a class.
+        
         Returns:
             str: code to be appended to the file
     """
@@ -124,7 +125,6 @@ def handle_direct_import(import_line: str, file_path:os.PathLike = "",USED_ROOT_
             content += file.read()
 
         classes_to_create = import_core.split('.')
-        print("Used root modules: ", USED_ROOT_MODULES)
         for class_name in reversed(classes_to_create):
             if class_name in USED_ROOT_MODULES:
                class_content = "class " + class_name + "(" + classes_to_create[0] + "):\n"
@@ -143,5 +143,102 @@ def handle_direct_import(import_line: str, file_path:os.PathLike = "",USED_ROOT_
         sys.path.remove(os.path.dirname(file_path))
     return content
 
-def handle_relative_import(import_line: str, file_path:os.PathLike = "") -> str:
-    pass
+def handle_relative_import(import_line: str, file_path:os.PathLike = "" ,USED_ROOT_MODULES: list = []) -> str:
+    """
+        This function handles relative imports like:
+            - from modulo_folder.modulo import Bolinho as bolinho
+            - from modulo_folder.modulo import pastel
+            - from modulo_folder import modulo
+
+        Here, the function will convert the relative import to a direct import.
+
+        Returns:
+            str: code to be appended to the file
+
+        Raises:
+            Exception: If the import is not found
+    """
+    start_tabs = re.search(r'^\s*', import_line).group()
+    import_origin = import_line.strip().split(" ")[1].strip()
+    print("IMPORT ORIGIN:", import_origin)
+    abs_dir = ""
+
+    BACKUP_SYS_PATH = sys.path.copy()
+    
+
+    if import_origin.startswith("."):
+        sys.path = []
+        dots = re.search(r'^\.*', import_origin).group()
+        
+        abs_path = os.path.abspath(file_path)
+        abs_dir = os.path.dirname(abs_path)
+        for _ in range(len(dots)-1):
+            abs_dir = os.path.dirname(abs_dir)
+        
+        import_origin = re.sub(r'^\.*', '', import_origin)
+
+    elif import_origin.startswith("_"):
+        return import_line
+    else:
+        import_dir_path = os.path.dirname(file_path)
+        sys.path.append(import_dir_path)
+
+        abs_dir = importlib.util.find_spec(import_origin)
+        if abs_dir is None:
+            raise Exception(f'Error: Import is not found. Import: {import_line}') # Import not found
+    
+        abs_dir = abs_dir.origin
+
+    if abs_dir: #add temporary path to the sys.path
+        sys.path.append(abs_dir)
+
+    direct_import = convert_to_direct(import_line, file_path, USED_ROOT_MODULES)
+    
+
+    sys.path = BACKUP_SYS_PATH
+    return direct_import
+
+def convert_to_direct(import_line: str, file_path:os.PathLike = "" ,USED_ROOT_MODULES: list = []) -> str:
+    """
+        This function converts a relative import to a direct import.
+        Then, the direct import will be handled by the handle_direct_import function.
+        To the final code will be appended the alias of the import.
+        
+        Returns:
+            str: code to be appended to the file
+    """
+    import_line = re.sub(r'\s*import\s*', '.', import_line)
+    import_line = import_line.replace("from ", "import ")
+    alias_dict = {}
+
+    valid_module = False
+    
+
+    if " as " in import_line:
+        alias_dict["alias"] = import_line.split(" as ")[1].strip()
+        import_line = import_line.split(" as ")[0].strip()
+    else:
+        alias_dict['alias'] = import_line.replace("import ", "").split(".")[-1]
+
+    import_get = import_line.replace("import ", "").split(".")
+    alias_dict['to'] = ".".join(import_get)
+    
+
+    for _ in range(len(import_get)):
+        try:
+            path = importlib.util.find_spec(".".join(import_get))
+        except ModuleNotFoundError:
+            path = None
+        if path:
+            valid_module = True
+            break
+        else:
+            import_get = import_get[:-1]
+
+    if valid_module:
+        import_line = ".".join(import_get)
+    
+    code = handle_direct_import(import_line, file_path, USED_ROOT_MODULES)
+
+    code += f"\n{alias_dict['alias']} = {alias_dict['to']}\n"
+    return code

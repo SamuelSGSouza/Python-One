@@ -40,12 +40,23 @@ def verify_file(start_file: os.PathLike) -> int:
     return OK
 
 def clean_file(content: str) -> str:
-    content = content.replace('\\\n', '\n')
-    content = content.replace('\\\r', '\r')
+    content = content.replace('\\\n', ' ')
+    content = content.replace('\\\r', ' ')
 
-    #se depois do " import " tiver um "(" e um ")" é uma importação de um módulo que está em outro arquivo
-    #substituir o "(" e tudo  dentro por *
-    content = re.sub(r'import \((\s+.*,\n)+\s+\)', 'import *', content)
+    #tirando linhas de comentarios
+    rows = content.split('\n')
+    content = ''
+    for row in rows:
+        if not row.strip().startswith('#'):
+            content += row + '\n'
+
+    #pegando todas as ocorrencias de parenteses com quebra de linha
+    pattern = r'import\s*\(.*?\)'
+    parenteses = re.findall(pattern, content, re.DOTALL)
+    for parentese in parenteses:
+        content = content.replace(parentese, parentese.replace('\n',' '))
+    with open('result.txt', 'w') as file:
+        file.write(content)
     return content
 
 def read_file(start_file: os.PathLike) -> str:
@@ -99,10 +110,8 @@ def append_code(content: str, file_path:str, profundidade:int) -> str:
         #pegando os tabs no inicio da linha
         if (line.strip().startswith("from ") or line.strip().startswith("import ")) and line.strip() not in USED_IMPORTS:
             USED_IMPORTS.append(line.strip())
-            print("*"*50)
-            print("Lidando com o import: ", line)
-            print("\n")
-            print("PROFUNDIDADE: ", profundidade)
+            print("\n","*"*50,"\n",)
+            
             content = convert_imports_to_code(line,profundidade, file_path)
             if profundidade > 0:
                 DEPTH_MODULES_DICT[profundidade] = []
@@ -137,11 +146,7 @@ def main(start_file: os.PathLike) -> None:
     new_file.write(content)
     new_file.close()
 
-    print("CRIAR UM DICIONÁRIO GERAL ONDE AS CHAVES \
-          SÃO A PROFUNDIDADE E OS VALORES SÃO OS ROOT \
-          MODULES QUE DEVEM SER RETORNADOS DO HANDLE IMPORT.")
-    print("QUANDO CHAMAR O HANDLE IMPORT, PASSAR O DICIONÁRIO ")
 
 if __name__ == '__main__':
     #listando arquivos na pasta test
-    main("tests/test_4.py")
+    main("tests/test_6.py")

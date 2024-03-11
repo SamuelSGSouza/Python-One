@@ -10,3 +10,6 @@ class Bolinho:
 
     def __repr__(self):
         return f"Bolinho de {self.sabor}"
+    
+    def sub_bolinho(self):
+        return "Sub bolinho"
