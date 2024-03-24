@@ -1,1 +1,4 @@
-from pandas.core.api import (     ArrowDtype,     Int8Dtype,     Int16Dtype,     Int32Dtype,     Int64Dtype,     UInt8Dtype,     UInt16Dtype,     UInt32Dtype,     UInt64Dtype,     Float32Dtype,     Float64Dtype,     CategoricalDtype,     PeriodDtype,     IntervalDtype,     DatetimeTZDtype,     StringDtype,     BooleanDtype,     NA,     isna,     isnull,     notna,     notnull,     Index,     CategoricalIndex,     RangeIndex,     MultiIndex,     IntervalIndex,     TimedeltaIndex,     DatetimeIndex,     PeriodIndex,     IndexSlice,     NaT,     Period,     period_range,     Timedelta,     timedelta_range,     Timestamp,     date_range,     bdate_range,     Interval,     interval_range,     DateOffset,     to_numeric,     to_datetime,     to_timedelta,     Flags,     Grouper,     factorize,     unique,     value_counts,     NamedAgg,     array,     Categorical,     set_eng_float_format,     Series,     DataFrame, )
+import pandas as pd
+
+df = pd.DataFrame({'A': [1, 2, 3]})
+print(df)

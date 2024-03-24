@@ -3,8 +3,6 @@ import re
 import sys
 import importlib.util
 
-import pkgutil
-
 # Constantes
 DEFAULT_MODULES = list(sys.builtin_module_names)
 DEFAULT_PACKAGES = ['handlers','_asyncio', '_bz2', '_ctypes', '_ctypes_test', 
@@ -67,6 +65,16 @@ TYPES = {
     2: "Simple import: 'import modulo' or 'import modulo.modulo2'...",
 }
 
+ERRORS = {
+    0: "\nError: {error_line} in {file_path}",
+    1: "\nError: File not found in {file_path}",
+    2: "\nError: File is not a Python file in {file_path}",
+    3: "\nError: Import is not found in {file_path} \n Import Line: {import_line} \n Import Line's File: {import_path}",
+    4: "\nError: Import is not valid in {file_path}",
+}
+
+Self_Path = "Origin"
+
 
 def handle_import_line(import_line: str,USED_ROOT_MODULES: list, file_path:os.PathLike = "") -> str:
     """
@@ -75,7 +83,6 @@ def handle_import_line(import_line: str,USED_ROOT_MODULES: list, file_path:os.Pa
         Returns:
             str: code to be appended to the new code
     """
-
     if import_line.strip().startswith("import "):
         return handle_direct_import(import_line, file_path, USED_ROOT_MODULES)
         
@@ -84,7 +91,7 @@ def handle_import_line(import_line: str,USED_ROOT_MODULES: list, file_path:os.Pa
         return handle_relative_import(import_line, file_path, USED_ROOT_MODULES)
 
     else:
-        raise Exception(f'Import Line is Not Valid. Import: {import_line}')
+        raise Exception(ERRORS[4].format(file_path=file_path))
     
 def handle_direct_import(import_line: str, file_path:os.PathLike = "",USED_ROOT_MODULES: list = []) -> str:
     """
@@ -98,6 +105,8 @@ def handle_direct_import(import_line: str, file_path:os.PathLike = "",USED_ROOT_
         Returns:
             str: code to be appended to the file
     """
+    import_line = re.sub(r'#.*', '', import_line) #tirando os comentários da linha
+
     content=""
 
     import_cores = re.sub(r'^import ', '', import_line.strip()).split(",")
@@ -117,9 +126,12 @@ def handle_direct_import(import_line: str, file_path:os.PathLike = "",USED_ROOT_
 
         import_path = importlib.util.find_spec(import_core)
         if import_path is None:
-            raise Exception(f'Error: Import is not found. Import: {import_line}') # Import not found
+            global Self_Path
+            raise Exception(ERRORS[3].format(file_path=file_path, import_line=import_line.strip(),import_path=Self_Path))
     
         import_path = import_path.origin
+
+        Self_Path = import_path
         
         with open(import_path, 'r', encoding="utf-8") as file:
             content += file.read()
@@ -158,9 +170,10 @@ def handle_relative_import(import_line: str, file_path:os.PathLike = "" ,USED_RO
         Raises:
             Exception: If the import is not found
     """
+    
+
     start_tabs = re.search(r'^\s*', import_line).group()
     import_origin = import_line.strip().split(" ")[1].strip()
-    print("IMPORT ORIGIN:", import_origin)
     abs_dir = ""
 
     BACKUP_SYS_PATH = sys.path.copy()
@@ -185,13 +198,15 @@ def handle_relative_import(import_line: str, file_path:os.PathLike = "" ,USED_RO
 
         abs_dir = importlib.util.find_spec(import_origin)
         if abs_dir is None:
-            raise Exception(f'Error: Import is not found. Import: {import_line}') # Import not found
+            raise Exception(ERRORS[3].format(file_path=file_path, import_line=import_line.strip(),import_path=Self_Path))
+
     
         abs_dir = abs_dir.origin
 
     if abs_dir: #add temporary path to the sys.path
         sys.path.append(abs_dir)
-
+        
+    
     direct_import = convert_to_direct(import_line, file_path, USED_ROOT_MODULES)
     
 
@@ -206,39 +221,52 @@ def convert_to_direct(import_line: str, file_path:os.PathLike = "" ,USED_ROOT_MO
         
         Returns:
             str: code to be appended to the file
+
+        Raises:
+            Exception: If the import is not found
     """
-    import_line = re.sub(r'\s*import\s*', '.', import_line)
-    import_line = import_line.replace("from ", "import ")
-    alias_dict = {}
+    imports = import_line.split("import")[1].strip().replace("(", "").replace(")","").split(",")
+    imports = [split.strip() for split in imports if split.strip()]
 
-    valid_module = False
-    
+    code = ""
+    for importe in imports:
+        temp_import_line = import_line.split("import")[0] + "import " + importe
+        temp_import_line = re.sub(r'\s*import\s*', '.', temp_import_line)
+        temp_import_line = temp_import_line.replace("from ", "import ")
+       
 
-    if " as " in import_line:
-        alias_dict["alias"] = import_line.split(" as ")[1].strip()
-        import_line = import_line.split(" as ")[0].strip()
-    else:
-        alias_dict['alias'] = import_line.replace("import ", "").split(".")[-1]
+        alias_dict = {}
 
-    import_get = import_line.replace("import ", "").split(".")
-    alias_dict['to'] = ".".join(import_get)
-    
+        valid_module = False
+        
 
-    for _ in range(len(import_get)):
-        try:
-            path = importlib.util.find_spec(".".join(import_get))
-        except ModuleNotFoundError:
-            path = None
-        if path:
-            valid_module = True
-            break
+        if " as " in importe:
+            alias_dict["alias"] = temp_import_line.split(" as ")[1].strip()
+            
+            temp_import_line = temp_import_line.split(" as ")[0].strip()
         else:
-            import_get = import_get[:-1]
+            alias_dict['alias'] = temp_import_line.replace("import ", "").split(".")[-1]
+        
+        import_get = temp_import_line.replace("import ", "").split(".")
+        alias_dict['to'] = ".".join(import_get)
+        
 
-    if valid_module:
-        import_line = ".".join(import_get)
-    
-    code = handle_direct_import(import_line, file_path, USED_ROOT_MODULES)
+        for _ in range(len(import_get)):
+            try:
+                path = importlib.util.find_spec(".".join(import_get))
+            except ModuleNotFoundError:
+                path = None
+            if path:
+                valid_module = True
+                break
+            else:
+                import_get = import_get[:-1]
 
-    code += f"\n{alias_dict['alias']} = {alias_dict['to']}\n"
+        if valid_module:
+            temp_import_line = ".".join(import_get)
+        
+            code += handle_direct_import(temp_import_line, file_path, USED_ROOT_MODULES)
+            code += f"\n{alias_dict['alias']} = {alias_dict['to']}\n"
+
+        
     return code

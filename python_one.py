@@ -42,13 +42,7 @@ def verify_file(start_file: os.PathLike) -> int:
 def clean_file(content: str) -> str:
     content = content.replace('\\\n', ' ')
     content = content.replace('\\\r', ' ')
-
-    #tirando linhas de comentarios
-    rows = content.split('\n')
-    content = ''
-    for row in rows:
-        if not row.strip().startswith('#'):
-            content += row + '\n'
+    content = re.sub(r'#.*\n', '\n', content) #pegando todas as ocorrencias de comentarios com quebra de linha
 
     #pegando todas as ocorrencias de parenteses com quebra de linha
     pattern = r'import\s*\(.*?\)'
@@ -149,4 +143,5 @@ def main(start_file: os.PathLike) -> None:
 
 if __name__ == '__main__':
     #listando arquivos na pasta test
+    print("CORRIGIR A IDENTAÇÃO DO ARQUIVO GERADO")
     main("tests/test_6.py")
